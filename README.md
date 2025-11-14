@@ -8,7 +8,7 @@ A webhook relay system that enables local machines to receive GitHub webhook eve
 GitHub Event → Cloud Relay Server → WebSocket → Local Client
 ```
 
-- **Server** (`server/`): FastAPI-based relay that receives webhooks and broadcasts via WebSocket
+- **Server** (`app.py`): FastAPI-based relay that receives webhooks and broadcasts via WebSocket
 - **Client** (`client/`): Local client that connects to relay and processes webhook events
 
 ## Quick Start
@@ -51,7 +51,6 @@ Now when GitHub events occur, they'll appear instantly in your local terminal!
 ### Run Server Locally
 
 ```bash
-cd server
 pip install -r requirements.txt
 python app.py
 ```

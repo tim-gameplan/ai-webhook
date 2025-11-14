@@ -51,14 +51,13 @@ curl -X POST http://localhost:8000/webhook \
   -d '{"zen": "test", "hook_id": 123}'
 
 # Test with signature verification (if GITHUB_WEBHOOK_SECRET is set)
-# See server/app.py:35-50 for signature verification logic
+# See app.py:35-50 for signature verification logic
 ```
 
 ### Deployment
 
 **Railway**:
 ```bash
-cd server
 railway login
 railway init
 railway up
@@ -70,7 +69,7 @@ railway domain  # Get deployment URL
 ## Architecture Notes
 
 ### WebSocket Connection Management
-- Server maintains a set of connected clients (`server/app.py:21`)
+- Server maintains a set of connected clients (`app.py:21`)
 - Clients auto-reconnect with exponential backoff (`client/client.py:108-155`)
 - Heartbeat mechanism prevents connection timeouts (30-second intervals)
 - Disconnected clients are automatically removed from the broadcast list
@@ -152,3 +151,31 @@ When setting up GitHub webhooks, configure:
 - **Content type**: `application/json`
 - **Secret**: Match your `GITHUB_WEBHOOK_SECRET` environment variable
 - **Events**: Select specific events or "Send me everything"
+
+## Current Deployment
+
+**Production Server**: https://web-production-3d53a.up.railway.app
+- Webhook endpoint: https://web-production-3d53a.up.railway.app/webhook
+- WebSocket endpoint: wss://web-production-3d53a.up.railway.app/ws
+- Deployed on: Railway
+- Status: Active and operational
+
+**GitHub Webhook**: Configured on tim-gameplan/ai-webhook repository
+- Receiving all events
+- No signature verification (GITHUB_WEBHOOK_SECRET not set)
+
+## Sending Custom Webhooks
+
+Any application can send webhooks to the relay server:
+
+```bash
+curl -X POST https://web-production-3d53a.up.railway.app/webhook \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: custom_event" \
+  -d '{
+    "event": "my_event",
+    "data": {"key": "value"}
+  }'
+```
+
+The webhook will be instantly broadcast to all connected clients.
