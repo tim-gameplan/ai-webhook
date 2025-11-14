@@ -42,3 +42,6 @@ node_modules/
 
 # Python version management
 .python-version
+
+# Tasks (not tracked in git)
+tasks/
