@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Environment
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Logs
+*.log
+logs/
+webhook_logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (if using any JS tooling)
+node_modules/
+
+# Deployment
+.railway/
+
+# Python version management
+.python-version
