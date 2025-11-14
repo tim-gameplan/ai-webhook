@@ -20,8 +20,9 @@ app = FastAPI(title="GitHub Webhook Relay")
 # Store connected WebSocket clients
 connected_clients: Set[WebSocket] = set()
 
-# Optional webhook secret for verification
-WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+# Security configuration
+WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")  # GitHub webhook signature verification
+API_KEY = os.getenv("API_KEY", "")  # Optional API key for custom webhooks
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,21 +34,53 @@ app.add_middleware(
 
 
 def verify_signature(payload: bytes, signature: str) -> bool:
-    """Verify GitHub webhook signature"""
+    """Verify GitHub webhook signature using HMAC-SHA256"""
     if not WEBHOOK_SECRET:
+        print("⚠️  WARNING: GITHUB_WEBHOOK_SECRET not set - signature verification disabled!")
         return True  # Skip verification if no secret set
-    
+
     if not signature:
+        print("❌ Webhook rejected: Missing signature header")
         return False
-    
+
     # GitHub sends signature as "sha256=<hash>"
     expected_signature = "sha256=" + hmac.new(
         WEBHOOK_SECRET.encode(),
         payload,
         hashlib.sha256
     ).hexdigest()
-    
-    return hmac.compare_digest(signature, expected_signature)
+
+    is_valid = hmac.compare_digest(signature, expected_signature)
+    if not is_valid:
+        print(f"❌ Webhook rejected: Invalid signature")
+
+    return is_valid
+
+
+def verify_api_key(request: Request) -> bool:
+    """Verify API key for custom (non-GitHub) webhooks"""
+    if not API_KEY:
+        return True  # Skip API key check if not configured
+
+    # Check for API key in Authorization header or X-API-Key header
+    auth_header = request.headers.get("Authorization", "")
+    api_key_header = request.headers.get("X-API-Key", "")
+
+    provided_key = ""
+    if auth_header.startswith("Bearer "):
+        provided_key = auth_header[7:]
+    elif api_key_header:
+        provided_key = api_key_header
+
+    if not provided_key:
+        print("❌ Webhook rejected: Missing API key")
+        return False
+
+    is_valid = hmac.compare_digest(provided_key, API_KEY)
+    if not is_valid:
+        print("❌ Webhook rejected: Invalid API key")
+
+    return is_valid
 
 
 @app.get("/")
@@ -101,22 +134,35 @@ async def github_webhook(request: Request):
     """
     GitHub webhook endpoint
     Configure this URL in GitHub: https://your-server.com/webhook
+    Supports both GitHub webhooks (with signature) and custom webhooks (with API key)
     """
     # Get headers
     event_type = request.headers.get("X-GitHub-Event")
     signature = request.headers.get("X-Hub-Signature-256", "")
     delivery_id = request.headers.get("X-GitHub-Delivery")
-    
+
     # Get raw body for signature verification
     body = await request.body()
-    
-    # Verify signature if secret is configured
-    if not verify_signature(body, signature):
-        print(f"Invalid signature for delivery {delivery_id}")
-        return JSONResponse(
-            status_code=403,
-            content={"error": "Invalid signature"}
-        )
+
+    # Determine if this is a GitHub webhook or custom webhook
+    is_github_webhook = bool(signature or event_type)
+
+    # Verify based on webhook type
+    if is_github_webhook:
+        # GitHub webhook - verify signature
+        if not verify_signature(body, signature):
+            print(f"❌ Invalid signature for delivery {delivery_id}")
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Invalid webhook signature"}
+            )
+    else:
+        # Custom webhook - verify API key
+        if not verify_api_key(request):
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Invalid or missing API key"}
+            )
     
     # Parse JSON payload
     try:
