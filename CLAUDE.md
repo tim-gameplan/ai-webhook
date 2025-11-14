@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a GitHub webhook relay system that enables local machines to receive GitHub webhook events through a cloud-hosted relay server. The architecture consists of two components:
 
-- **Server** (`server/app.py`): FastAPI-based relay server that receives GitHub webhooks and broadcasts them to connected clients via WebSocket
+- **Server** (`app.py`): FastAPI-based relay server that receives GitHub webhooks and broadcasts them to connected clients via WebSocket
 - **Client** (`client/client.py`): Local WebSocket client that connects to the relay server and processes incoming webhook events
 
 **Data Flow**: GitHub Event → Cloud Relay Server (`/webhook` endpoint) → WebSocket → Local Client
@@ -16,7 +16,6 @@ This is a GitHub webhook relay system that enables local machines to receive Git
 ### Server Development
 ```bash
 # Install server dependencies
-cd server
 pip install -r requirements.txt
 
 # Run server locally
@@ -79,15 +78,16 @@ railway domain  # Get deployment URL
 ### Webhook Signature Verification
 The server supports optional GitHub webhook signature verification:
 - Set `GITHUB_WEBHOOK_SECRET` environment variable to enable
-- Verification logic in `server/app.py:35-50`
+- Verification logic in `app.py:35-50`
 - Uses HMAC-SHA256 comparison via `hmac.compare_digest()` to prevent timing attacks
 
 ### Event Broadcasting
-When a webhook is received:
+When a webhook is received (`app.py:99-159`):
 1. Server verifies signature (if secret configured)
 2. Wraps payload with metadata (event type, delivery ID, timestamp)
 3. Broadcasts to all connected WebSocket clients
 4. Removes any clients that fail to receive
+5. Returns status including number of clients notified
 
 ### Client Event Handling
 The client provides customizable event handlers for different GitHub events:
