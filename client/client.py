@@ -21,6 +21,15 @@ except ImportError:
     print("⚠️  LLM insights handler not available")
     LLM_HANDLER_AVAILABLE = False
 
+# Import session manager for collaborative sessions
+try:
+    from session_manager import get_session_manager
+    session_manager = get_session_manager()
+    SESSION_MANAGER_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Session manager not available: {e}")
+    SESSION_MANAGER_AVAILABLE = False
+
 # Configuration
 SERVER_URL = os.getenv("RELAY_SERVER_URL", "ws://localhost:8000/ws")
 LOG_DIR = Path("webhook_logs")
@@ -46,6 +55,22 @@ def handle_webhook(data: dict):
 
     if data.get("type") == "pong":
         return  # Heartbeat response
+
+    # Handle collaborative session commands
+    if data.get("type") == "collaborative_session_command":
+        if SESSION_MANAGER_AVAILABLE:
+            response = session_manager.process_command(data)
+
+            # Display response
+            if response.get("status") == "success":
+                print(f"✅ {response.get('message', 'Command successful')}")
+            else:
+                print(f"❌ {response.get('message', 'Command failed')}")
+                if response.get("error"):
+                    print(f"   Error: {response['error']}")
+        else:
+            print("⚠️  Received collaborative session command but session manager not available")
+        return
 
     # Handle LLM conversation insights
     if data.get("type") == "llm_conversation_insight":
