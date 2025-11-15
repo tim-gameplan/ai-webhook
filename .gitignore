@@ -29,6 +29,9 @@ Thumbs.db
 logs/
 webhook_logs/
 
+# LLM Insights (stored locally only)
+llm_insights/
+
 # Testing
 .pytest_cache/
 .coverage

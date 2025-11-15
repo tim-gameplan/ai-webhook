@@ -21,8 +21,9 @@ app = FastAPI(title="GitHub Webhook Relay")
 connected_clients: Set[WebSocket] = set()
 
 # Security configuration
-WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")  # GitHub webhook signature verification
-API_KEY = os.getenv("API_KEY", "")  # Optional API key for custom webhooks
+# Note: .strip() prevents trailing whitespace issues when copy/pasting secrets
+WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "").strip()  # GitHub webhook signature verification
+API_KEY = os.getenv("API_KEY", "").strip()  # Optional API key for custom webhooks
 
 app.add_middleware(
     CORSMiddleware,
