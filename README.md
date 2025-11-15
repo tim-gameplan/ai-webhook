@@ -2,6 +2,8 @@
 
 A webhook relay system that enables local machines to receive GitHub webhook events through a cloud-hosted relay server.
 
+**New to this project?** → See [CONTRIBUTING.md](CONTRIBUTING.md) for complete onboarding guide
+
 ## Architecture
 
 ```
@@ -45,6 +47,42 @@ python client.py
 ```
 
 Now when GitHub events occur, they'll appear instantly in your local terminal!
+
+### 4. (Optional) Send LLM Conversation Insights
+
+Integrate with AI assistants to capture insights from conversations:
+
+```python
+# See examples/send_insight.py for full example
+import requests
+
+requests.post(
+    "https://your-app.railway.app/webhook",
+    headers={"X-API-Key": "your-api-key"},
+    json={
+        "type": "llm_conversation_insight",
+        "version": "1.0",
+        "timestamp": "2025-11-15T10:30:00Z",
+        "conversation": {"id": "conv_001", "context": "Planning new features"},
+        "insight": {
+            "type": "action_item",
+            "priority": "high",
+            "title": "Implement rate limiting",
+            "content": "Add rate limiting to webhook endpoint",
+            "tags": ["security"]
+        },
+        "metadata": {"llm_model": "claude", "confidence": 0.95}
+    }
+)
+```
+
+Review insights with the CLI tool:
+```bash
+python tools/insights_cli.py list --priority high
+python tools/insights_cli.py stats
+```
+
+**See [docs/LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md) for complete guide.**
 
 ## Development
 
@@ -119,10 +157,17 @@ def handle_webhook(data: dict):
 
 ## Use Cases
 
+**GitHub Webhooks:**
 - Trigger local scripts on GitHub events
 - Build custom CI/CD pipelines
 - Auto-generate PR descriptions/reviews
 - Real-time repository activity monitoring
+
+**LLM Conversation Insights:**
+- Capture action items from AI conversations
+- Track ideas and decisions automatically
+- Organize conversation insights by type and priority
+- Review and act on insights via CLI tool
 - Integration with AI workflows
 
 ## Security
@@ -130,6 +175,17 @@ def handle_webhook(data: dict):
 - Always use `GITHUB_WEBHOOK_SECRET` in production
 - Use WSS (not WS) for production WebSocket connections
 - Logs are stored locally in `webhook_logs/` - review .gitignore settings
+
+See [SECURITY_SETUP.md](SECURITY_SETUP.md) for detailed security configuration.
+
+## Documentation
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - New engineer onboarding guide
+- **[CLAUDE.md](CLAUDE.md)** - Architecture details and development patterns (for Claude Code)
+- **[SECURITY_SETUP.md](SECURITY_SETUP.md)** - Security configuration and testing
+- **[docs/deployment/](docs/deployment/)** - Deployment guides and reports
+- **[docs/worklogs/](docs/worklogs/)** - Development session logs
+- **[FUTURE_TASKS.md](FUTURE_TASKS.md)** - Roadmap of planned improvements
 
 ## License
 
