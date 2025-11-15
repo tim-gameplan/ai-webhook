@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Note:** If a new engineer asks for onboarding help, direct them to [CONTRIBUTING.md](CONTRIBUTING.md) for a comprehensive quick-start guide.
+
 ## Project Overview
 
 This is a GitHub webhook relay system that enables local machines to receive GitHub webhook events through a cloud-hosted relay server. The architecture consists of two components:
@@ -162,16 +164,77 @@ When setting up GitHub webhooks, configure:
 
 **GitHub Webhook**: Configured on tim-gameplan/ai-webhook repository
 - Receiving all events
-- No signature verification (GITHUB_WEBHOOK_SECRET not set)
+- HMAC-SHA256 signature verification enabled
+- API key authentication enabled for custom webhooks
+
+## LLM Conversation Integration
+
+The system supports capturing structured insights from LLM conversations. See [docs/LLM_INTEGRATION.md](docs/LLM_INTEGRATION.md) for complete guide.
+
+**Quick Example:**
+```python
+# Send an insight from an LLM conversation
+import requests
+
+requests.post(
+    "https://web-production-3d53a.up.railway.app/webhook",
+    headers={"X-API-Key": api_key},
+    json={
+        "type": "llm_conversation_insight",
+        "version": "1.0",
+        "timestamp": "2025-11-15T10:30:00Z",
+        "conversation": {
+            "id": "conv_abc123",
+            "context": "Planning new features"
+        },
+        "insight": {
+            "type": "action_item",  # or: idea, decision, question, note, risk
+            "priority": "high",      # or: medium, low
+            "title": "Brief title",
+            "content": "Detailed description",
+            "tags": ["security", "feature"],
+            "suggested_followup": "Create task file"
+        },
+        "metadata": {
+            "llm_model": "claude-sonnet-4",
+            "confidence": 0.95
+        }
+    }
+)
+```
+
+**Client Processing:**
+- Insights automatically categorized and stored in `llm_insights/` directory
+- Organized by type: action_items/, ideas/, decisions/, questions/, notes/, risks/
+- High-priority action items trigger task creation suggestions
+
+**Review CLI:**
+```bash
+python tools/insights_cli.py list --priority high
+python tools/insights_cli.py stats
+python tools/insights_cli.py export --format markdown
+```
+
+**Handler Implementation:** See `client/handlers/llm_insights.py`
 
 ## Sending Custom Webhooks
 
-Any application can send webhooks to the relay server:
+Any application can send webhooks to the relay server using API key authentication:
 
 ```bash
+# Using X-API-Key header
 curl -X POST https://web-production-3d53a.up.railway.app/webhook \
   -H "Content-Type: application/json" \
-  -H "X-GitHub-Event: custom_event" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "event": "my_event",
+    "data": {"key": "value"}
+  }'
+
+# Or using Bearer token
+curl -X POST https://web-production-3d53a.up.railway.app/webhook \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
   -d '{
     "event": "my_event",
     "data": {"key": "value"}
@@ -179,3 +242,5 @@ curl -X POST https://web-production-3d53a.up.railway.app/webhook \
 ```
 
 The webhook will be instantly broadcast to all connected clients.
+
+**Note:** GitHub webhooks use signature verification and do not require an API key.

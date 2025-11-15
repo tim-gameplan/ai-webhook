@@ -2,6 +2,7 @@
 GitHub Webhook Client
 
 Run this on your local machine to receive webhook events from the relay server.
+Supports both GitHub webhooks and LLM conversation insights.
 """
 
 import asyncio
@@ -10,6 +11,15 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+
+# Import LLM insights handler
+try:
+    from handlers.llm_insights import LLMInsightHandler, validate_llm_insight
+    llm_handler = LLMInsightHandler()
+    LLM_HANDLER_AVAILABLE = True
+except ImportError:
+    print("⚠️  LLM insights handler not available")
+    LLM_HANDLER_AVAILABLE = False
 
 # Configuration
 SERVER_URL = os.getenv("RELAY_SERVER_URL", "ws://localhost:8000/ws")
@@ -33,26 +43,42 @@ def handle_webhook(data: dict):
     if data.get("type") == "connection":
         print(f"✅ {data['message']}")
         return
-    
+
     if data.get("type") == "pong":
         return  # Heartbeat response
-    
+
+    # Handle LLM conversation insights
+    if data.get("type") == "llm_conversation_insight":
+        if LLM_HANDLER_AVAILABLE:
+            # Validate insight structure
+            is_valid, error = validate_llm_insight(data)
+            if not is_valid:
+                print(f"❌ Invalid LLM insight: {error}")
+                return
+
+            # Process the insight
+            llm_handler.handle_insight(data)
+        else:
+            print("⚠️  Received LLM insight but handler not available")
+        return
+
     if data.get("type") != "webhook":
         print(f"⚠️  Unknown message type: {data.get('type')}")
         return
-    
+
+    # Handle GitHub webhooks
     event_type = data.get("event")
     delivery_id = data.get("delivery_id")
     payload = data.get("payload", {})
-    
+
     print(f"\n🔔 Received GitHub webhook:")
     print(f"   Event: {event_type}")
     print(f"   Delivery ID: {delivery_id}")
     print(f"   Timestamp: {data.get('timestamp')}")
-    
+
     # Log the webhook
     log_webhook(event_type, data)
-    
+
     # Handle specific events
     if event_type == "push":
         handle_push_event(payload)
