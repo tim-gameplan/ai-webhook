@@ -20,11 +20,12 @@ WHEN I ASK YOU TO:
 - List files, check disk space, find files → Send shell command webhook
 - Run any local command → Send appropriate webhook
 
-WEBHOOK FORMAT:
+WEBHOOK FORMAT (ALWAYS use sync mode):
 POST with header "X-API-Key: qVaBlMjz5GODXoAdpOJs_Hl_y3HolOqSvnCJf-YcZok"
 
 {
   "type": "task_command",
+  "sync": true,
   "data": {
     "task_id": "unique_id",
     "action_type": "git|shell|claude_code",
@@ -34,6 +35,9 @@ POST with header "X-API-Key: qVaBlMjz5GODXoAdpOJs_Hl_y3HolOqSvnCJf-YcZok"
     }
   }
 }
+
+SYNC MODE: Set "sync": true to get results immediately (ALWAYS DO THIS)
+Response includes actual output in "output.stdout"
 
 GIT COMMANDS (action_type: "git"):
 - Status: {"command": ["git", "status"]}
@@ -48,11 +52,11 @@ SHELL COMMANDS (action_type: "shell"):
 
 WORKING DIR: /Users/tim/gameplan.ai/ai-webhook
 
-AFTER SENDING: Tell me the webhook was sent and results are at http://localhost:5001
+AFTER SENDING: Tell me the actual results from the response (you get them immediately with sync mode)
 
 TASK IDs: Use format like "git_status_001", "shell_ls_001" (increment number each time)
 
-SAFETY: No destructive commands (rm -rf, etc.). Always use timeouts (30s for git/shell, 300s for claude_code).
+SAFETY: No destructive commands (rm -rf, etc.). 30-second timeout for sync mode.
 ```
 
 ---
@@ -70,6 +74,7 @@ WEBHOOK ACCESS:
 When I ask for git status, commits, file listings, or local commands, send POST webhook:
 {
   "type": "task_command",
+  "sync": true,
   "data": {
     "task_id": "git_status_001",
     "action_type": "git",
@@ -80,12 +85,13 @@ When I ask for git status, commits, file listings, or local commands, send POST 
   }
 }
 
+ALWAYS include "sync": true - you'll get actual results in response
 Action types: "git", "shell", "claude_code"
 Git: {"command": ["git", "status"]}
 Shell: {"command": "ls -la"}
 Header: X-API-Key: qVaBlMjz5GODXoAdpOJs_Hl_y3HolOqSvnCJf-YcZok
 
-Tell me results are at http://localhost:5001
+Tell me the actual results from output.stdout (not just "webhook sent")
 ```
 
 ---

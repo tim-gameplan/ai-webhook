@@ -1,0 +1,12 @@
+{
+  "type": "task_command",
+  "sync": true,
+  "data": {
+    "task_id": "shell_ls_sync_001",
+    "action_type": "shell",
+    "params": {
+      "command": "ls -la",
+      "working_dir": "/Users/tim/gameplan.ai/ai-webhook"
+    }
+  }
+}

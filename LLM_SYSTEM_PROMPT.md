@@ -30,6 +30,7 @@ All webhook requests must follow this structure:
 ```json
 {
   "type": "task_command",
+  "sync": true,
   "data": {
     "task_id": "unique_task_id",
     "action_type": "git|shell|claude_code",
@@ -43,12 +44,107 @@ All webhook requests must follow this structure:
 ### Field Descriptions
 
 - **type**: Always `"task_command"`
+- **sync**: (NEW) Set to `true` to receive immediate results (RECOMMENDED)
 - **task_id**: Unique identifier (e.g., `"git_status_001"`, `"shell_ls_001"`)
 - **action_type**: Type of action to execute
   - `"git"` - Git commands
   - `"shell"` - Shell commands
   - `"claude_code"` - Claude Code CLI commands
 - **params**: Action-specific parameters (see below)
+
+---
+
+## Synchronous vs Asynchronous Mode
+
+**IMPORTANT: Use synchronous mode** (`"sync": true`) for best experience!
+
+### Synchronous Mode (RECOMMENDED)
+
+When you set `"sync": true`, you receive the actual task results immediately in the HTTP response:
+
+**Example Request**:
+```json
+{
+  "type": "task_command",
+  "sync": true,
+  "data": {
+    "task_id": "git_status_001",
+    "action_type": "git",
+    "params": {
+      "command": ["git", "status"],
+      "working_dir": "/Users/tim/gameplan.ai/ai-webhook"
+    }
+  }
+}
+```
+
+**Example Response** (returned in 7ms):
+```json
+{
+  "status": "completed",
+  "task_id": "git_status_001",
+  "output": {
+    "success": true,
+    "stdout": "On branch main\nnothing to commit, working tree clean\n",
+    "stderr": "",
+    "returncode": 0
+  },
+  "execution_time_ms": 7,
+  "clients_notified": 1
+}
+```
+
+**Benefits**:
+- You see the actual results immediately
+- Can continue the conversation with context
+- Natural conversational flow
+- Example: "You're on branch main with no uncommitted changes"
+
+**Limitations**:
+- 30-second timeout (tasks exceeding this return timeout error)
+- Most git/shell commands complete in <5 seconds
+
+### Asynchronous Mode (Legacy)
+
+When `"sync"` is omitted or set to `false`:
+
+**Response** (immediate):
+```json
+{
+  "status": "received",
+  "event": null,
+  "delivery_id": null,
+  "clients_notified": 1
+}
+```
+
+**Results**: Available at http://localhost:5001 (user must check manually)
+
+**When to use async**:
+- Tasks that may take >30 seconds
+- Fire-and-forget scenarios
+
+### Recommended Pattern
+
+**Always use sync mode unless you know the task will be slow**:
+
+```json
+{
+  "type": "task_command",
+  "sync": true,  // <-- ALWAYS include this
+  "data": {...}
+}
+```
+
+**This enables natural conversation**:
+
+User: "What's my git status?"
+You: "You're on branch main with 2 uncommitted files:
+- README.md
+- app.py"
+
+Instead of:
+You: "I triggered the command. Check http://localhost:5001"
 
 ---
 
