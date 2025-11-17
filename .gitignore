@@ -32,6 +32,9 @@ webhook_logs/
 # LLM Insights (stored locally only)
 llm_insights/
 
+# Collaborative Sessions (stored locally only)
+sessions/
+
 # Testing
 .pytest_cache/
 .coverage
