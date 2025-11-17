@@ -2,6 +2,20 @@
 
 Configure Claude on your iPhone to trigger local development tasks.
 
+---
+
+## Quick Start
+
+**New**: We've created comprehensive LLM instructions you can copy/paste:
+
+1. **For Claude Projects**: Use `../LLM_SYSTEM_PROMPT.md` (complete reference)
+2. **For Custom Instructions**: Use `../LLM_CUSTOM_INSTRUCTIONS.md` (shorter)
+3. **Testing Guide**: See `../LLM_INTEGRATION_TEST.md` to validate setup
+
+This guide below provides the original manual setup process. For faster setup, just copy/paste the content from the files above into your Claude Project.
+
+---
+
 ## Prerequisites
 
 - Claude mobile app (iOS)

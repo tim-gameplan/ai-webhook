@@ -2,6 +2,20 @@
 
 Configure ChatGPT on your iPhone to trigger local development tasks.
 
+---
+
+## Quick Start
+
+**New**: We've created comprehensive LLM instructions you can copy/paste:
+
+1. **For Custom Instructions**: Use `../LLM_CUSTOM_INSTRUCTIONS.md` (fits within ChatGPT's 1500 char limit)
+2. **Full Reference**: See `../LLM_SYSTEM_PROMPT.md` (complete documentation)
+3. **Testing Guide**: See `../LLM_INTEGRATION_TEST.md` to validate setup
+
+This guide below provides the original manual setup process. For faster setup, just copy/paste the content from LLM_CUSTOM_INSTRUCTIONS.md into your ChatGPT Custom Instructions.
+
+---
+
 ## Prerequisites
 
 - ChatGPT mobile app (iOS)
