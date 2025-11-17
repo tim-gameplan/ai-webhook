@@ -1,0 +1,11 @@
+{
+  "type": "task_command",
+  "data": {
+    "task_id": "shell_echo_001",
+    "action_type": "shell",
+    "params": {
+      "command": "echo 'Hello from voice LLM!'",
+      "timeout": 30
+    }
+  }
+}

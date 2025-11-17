@@ -5,12 +5,22 @@ Run this on your local machine to receive webhook events from the relay server.
 Supports both GitHub webhooks and LLM conversation insights.
 """
 
+print("🔍 DEBUG: Client script starting...")
+
 import asyncio
 import websockets
 import json
 import os
 from datetime import datetime
 from pathlib import Path
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
+# Add current directory to path for local imports
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
 
 # Import LLM insights handler
 try:
@@ -29,6 +39,15 @@ try:
 except ImportError as e:
     print(f"⚠️  Session manager not available: {e}")
     SESSION_MANAGER_AVAILABLE = False
+
+# Import task executor for MVP task execution
+try:
+    from task_executor import TaskExecutor
+    task_executor = TaskExecutor()
+    TASK_EXECUTOR_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Task executor not available: {e}")
+    TASK_EXECUTOR_AVAILABLE = False
 
 # Configuration
 SERVER_URL = os.getenv("RELAY_SERVER_URL", "ws://localhost:8000/ws")
@@ -56,6 +75,19 @@ def handle_webhook(data: dict):
     if data.get("type") == "pong":
         return  # Heartbeat response
 
+    # Check if this is a wrapped message from relay server
+    # If type="webhook", the actual payload is in the "payload" field
+    if data.get("type") == "webhook":
+        payload = data.get("payload", {})
+        # Check if the wrapped payload is a special command type
+        if payload.get("type") == "collaborative_session_command":
+            data = payload  # Unwrap and process
+        elif payload.get("type") == "llm_conversation_insight":
+            data = payload  # Unwrap and process
+        elif payload.get("type") == "task_command":
+            data = payload  # Unwrap and process
+        # else: it's a regular GitHub webhook, continue with normal processing
+
     # Handle collaborative session commands
     if data.get("type") == "collaborative_session_command":
         if SESSION_MANAGER_AVAILABLE:
@@ -70,6 +102,35 @@ def handle_webhook(data: dict):
                     print(f"   Error: {response['error']}")
         else:
             print("⚠️  Received collaborative session command but session manager not available")
+        return
+
+    # Handle MVP task commands
+    if data.get("type") == "task_command":
+        print(f"\n📬 Received task command")
+        if TASK_EXECUTOR_AVAILABLE:
+            task_data = data.get("data", {})
+            task_id = task_data.get("task_id", "unknown")
+            action_type = task_data.get("action_type", "unknown")
+
+            print(f"   Task ID: {task_id}")
+            print(f"   Action: {action_type}")
+
+            # Execute task
+            result = task_executor.handle_task(task_data)
+
+            # Display result
+            if result.get("status") == "success":
+                print(f"✅ Task completed: {task_id}")
+                output = result.get("result", {})
+                if output.get("stdout"):
+                    print(f"   Output: {output['stdout'][:100]}...")  # Show first 100 chars
+            elif result.get("status") == "failed":
+                print(f"❌ Task failed: {task_id}")
+                print(f"   Error: {result.get('error')}")
+            else:
+                print(f"⚠️  Task error: {result.get('error')}")
+        else:
+            print("⚠️  Task executor not available")
         return
 
     # Handle LLM conversation insights
