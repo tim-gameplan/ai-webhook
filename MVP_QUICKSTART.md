@@ -234,13 +234,18 @@ ai-webhook/
 │   ├── LLM_ACTIONS.md             # Action reference
 │   ├── CHATGPT_SETUP.md           # ChatGPT guide
 │   ├── CLAUDE_SETUP.md            # Claude guide
-│   └── GEMINI_SETUP.md            # Gemini guide
+│   ├── GEMINI_SETUP.md            # Gemini guide
+│   ├── ARCHITECTURE.md            # System architecture
+│   └── planning/                  # Planning documents
+├── tests/
+│   ├── test_mvp.py                # MVP test suite
+│   ├── test_sqlite_backend.py     # Backend tests
+│   └── test_task_executor.py      # Executor tests
 ├── examples/
 │   ├── git_status.json            # Example webhooks
 │   └── ...
 ├── start_mvp.sh                   # Start script
 ├── stop_mvp.sh                    # Stop script
-├── test_mvp.py                    # Test suite
 ├── tasks.db                       # SQLite database (created on first run)
 └── .env                           # Your configuration
 ```
@@ -270,7 +275,7 @@ ai-webhook/
 ### Learn More
 
 - **Action Types**: [docs/LLM_ACTIONS.md](docs/LLM_ACTIONS.md)
-- **Full Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **Full Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
@@ -306,12 +311,12 @@ ls -la webhook_logs/
 
 **Run tests**:
 ```bash
-python3 test_mvp.py
+python3 tests/test_mvp.py
 ```
 
 **Documentation**:
 - [LLM Actions Reference](docs/LLM_ACTIONS.md)
-- [Architecture Overview](ARCHITECTURE.md)
+- [Architecture Overview](docs/ARCHITECTURE.md)
 
 ---
 

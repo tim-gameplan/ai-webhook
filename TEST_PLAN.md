@@ -49,7 +49,7 @@ SQLITE_PATH=./tasks.db
 
 ```bash
 # Run comprehensive test suite
-python3 test_mvp.py
+python3 tests/test_mvp.py
 ```
 
 **Expected Output**:
