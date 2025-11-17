@@ -66,18 +66,27 @@ def log_webhook(event_type: str, payload: dict):
     print(f"📝 Saved to {filename}")
 
 
-def handle_webhook(data: dict):
-    """Process incoming webhook data"""
+def handle_webhook(data: dict, sync_mode: bool = False):
+    """Process incoming webhook data
+
+    Args:
+        data: The webhook data
+        sync_mode: If True, returns result for synchronous response
+
+    Returns:
+        dict or None: Task result if sync_mode=True and task was executed, None otherwise
+    """
     if data.get("type") == "connection":
         print(f"✅ {data['message']}")
-        return
+        return None
 
     if data.get("type") == "pong":
-        return  # Heartbeat response
+        return None  # Heartbeat response
 
     # Check if this is a wrapped message from relay server
     # If type="webhook", the actual payload is in the "payload" field
     if data.get("type") == "webhook":
+        sync_mode = data.get("sync", False)  # Extract sync flag from wrapper
         payload = data.get("payload", {})
         # Check if the wrapped payload is a special command type
         if payload.get("type") == "collaborative_session_command":
@@ -102,11 +111,12 @@ def handle_webhook(data: dict):
                     print(f"   Error: {response['error']}")
         else:
             print("⚠️  Received collaborative session command but session manager not available")
-        return
+        return None
 
     # Handle MVP task commands
     if data.get("type") == "task_command":
-        print(f"\n📬 Received task command")
+        sync_indicator = " (sync)" if sync_mode else ""
+        print(f"\n📬 Received task command{sync_indicator}")
         if TASK_EXECUTOR_AVAILABLE:
             task_data = data.get("data", {})
             task_id = task_data.get("task_id", "unknown")
@@ -129,9 +139,29 @@ def handle_webhook(data: dict):
                 print(f"   Error: {result.get('error')}")
             else:
                 print(f"⚠️  Task error: {result.get('error')}")
+
+            # If sync mode, prepare result to send back
+            if sync_mode:
+                task_result = {
+                    "type": "task_result",
+                    "task_id": task_id,
+                    "status": "completed" if result.get("status") == "success" else "failed",
+                    "output": result.get("result"),
+                    "error": result.get("error")
+                }
+                if sync_mode:
+                    print(f"↩️  Sending result back to relay server")
+                return task_result
         else:
             print("⚠️  Task executor not available")
-        return
+            if sync_mode:
+                return {
+                    "type": "task_result",
+                    "task_id": data.get("data", {}).get("task_id", "unknown"),
+                    "status": "failed",
+                    "error": "Task executor not available"
+                }
+        return None
 
     # Handle LLM conversation insights
     if data.get("type") == "llm_conversation_insight":
@@ -140,17 +170,17 @@ def handle_webhook(data: dict):
             is_valid, error = validate_llm_insight(data)
             if not is_valid:
                 print(f"❌ Invalid LLM insight: {error}")
-                return
+                return None
 
             # Process the insight
             llm_handler.handle_insight(data)
         else:
             print("⚠️  Received LLM insight but handler not available")
-        return
+        return None
 
     if data.get("type") != "webhook":
         print(f"⚠️  Unknown message type: {data.get('type')}")
-        return
+        return None
 
     # Handle GitHub webhooks
     event_type = data.get("event")
@@ -174,6 +204,8 @@ def handle_webhook(data: dict):
         handle_issue_event(payload)
     else:
         print(f"   Action: {payload.get('action', 'N/A')}")
+
+    return None
 
 
 def handle_push_event(payload: dict):
@@ -244,7 +276,11 @@ async def connect_with_retry(max_retries: int = None, retry_delay: int = 5):
                     async for message in websocket:
                         try:
                             data = json.loads(message)
-                            handle_webhook(data)
+                            result = handle_webhook(data)
+
+                            # If synchronous mode and we have a result, send it back
+                            if result is not None:
+                                await websocket.send(json.dumps(result))
                         except json.JSONDecodeError:
                             print(f"⚠️  Invalid JSON received: {message}")
                         except Exception as e:

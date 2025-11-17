@@ -12,13 +12,18 @@ import hmac
 import hashlib
 import json
 import os
-from typing import Set
+import asyncio
+from typing import Set, Dict
 from datetime import datetime
 
 app = FastAPI(title="GitHub Webhook Relay")
 
 # Store connected WebSocket clients
 connected_clients: Set[WebSocket] = set()
+
+# Store pending synchronous task requests
+# Format: {task_id: asyncio.Future}
+pending_sync_tasks: Dict[str, asyncio.Future] = {}
 
 # Security configuration
 # Note: .strip() prevents trailing whitespace issues when copy/pasting secrets
@@ -112,14 +117,31 @@ async def websocket_endpoint(websocket: WebSocket):
             "timestamp": datetime.utcnow().isoformat()
         })
         
-        # Keep connection alive and receive heartbeat/pings
+        # Keep connection alive and receive messages from client
         while True:
             data = await websocket.receive_text()
-            # Echo back for heartbeat
-            await websocket.send_json({
-                "type": "pong",
-                "timestamp": datetime.utcnow().isoformat()
-            })
+            message = json.loads(data)
+
+            # Handle different message types
+            if message.get("type") == "task_result":
+                # Client sending back task results for synchronous mode
+                task_id = message.get("task_id")
+                if task_id in pending_sync_tasks:
+                    # Resolve the pending future with the result
+                    pending_sync_tasks[task_id].set_result(message)
+                    print(f"✅ Received sync result for task: {task_id}")
+            elif message.get("type") == "ping":
+                # Heartbeat - echo back
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            else:
+                # Unknown message type - echo back for compatibility
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             
     except WebSocketDisconnect:
         print(f"Client {client_id} disconnected")
@@ -173,19 +195,40 @@ async def github_webhook(request: Request):
             status_code=400,
             content={"error": "Invalid JSON payload"}
         )
-    
+
+    # Check if this is a synchronous request
+    sync_mode = payload.get("sync", False)
+    task_id = None
+
+    if sync_mode:
+        # Extract task ID for synchronous mode
+        task_id = payload.get("data", {}).get("task_id")
+        if not task_id:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Synchronous mode requires task_id in data"}
+            )
+
     # Create webhook data package
     webhook_data = {
         "type": "webhook",
+        "sync": sync_mode,  # Include sync flag for client
         "event": event_type,
         "delivery_id": delivery_id,
         "timestamp": datetime.utcnow().isoformat(),
         "payload": payload
     }
-    
-    print(f"Received {event_type} event (delivery: {delivery_id})")
+
+    print(f"Received {event_type or 'custom'} event (delivery: {delivery_id}, sync: {sync_mode})")
     print(f"Broadcasting to {len(connected_clients)} clients")
-    
+
+    # If synchronous mode, create a future to wait for result
+    result_future = None
+    if sync_mode:
+        result_future = asyncio.Future()
+        pending_sync_tasks[task_id] = result_future
+        print(f"⏳ Waiting for sync result: {task_id}")
+
     # Broadcast to all connected clients
     disconnected = set()
     for client in connected_clients:
@@ -194,10 +237,49 @@ async def github_webhook(request: Request):
         except Exception as e:
             print(f"Failed to send to client: {e}")
             disconnected.add(client)
-    
+
     # Remove disconnected clients
     connected_clients.difference_update(disconnected)
-    
+
+    # If synchronous mode, wait for result
+    if sync_mode and result_future:
+        try:
+            # Wait up to 30 seconds for task completion
+            start_time = datetime.utcnow()
+            result = await asyncio.wait_for(result_future, timeout=30.0)
+            end_time = datetime.utcnow()
+            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+
+            # Clean up
+            if task_id in pending_sync_tasks:
+                del pending_sync_tasks[task_id]
+
+            # Return the actual task result
+            return JSONResponse({
+                "status": result.get("status", "completed"),
+                "task_id": task_id,
+                "output": result.get("output"),
+                "execution_time_ms": execution_time_ms,
+                "clients_notified": len(connected_clients)
+            })
+
+        except asyncio.TimeoutError:
+            # Task didn't complete in time
+            if task_id in pending_sync_tasks:
+                del pending_sync_tasks[task_id]
+
+            print(f"⏱️  Timeout waiting for task: {task_id}")
+            return JSONResponse(
+                status_code=504,
+                content={
+                    "status": "timeout",
+                    "task_id": task_id,
+                    "error": "Task execution exceeded 30 second timeout",
+                    "message": "Task may still be running locally. Check results viewer."
+                }
+            )
+
+    # Asynchronous mode - return immediately
     return JSONResponse({
         "status": "received",
         "event": event_type,
