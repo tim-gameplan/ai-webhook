@@ -1,0 +1,12 @@
+{
+  "type": "task_command",
+  "sync": true,
+  "data": {
+    "task_id": "git_status_sync_001",
+    "action_type": "git",
+    "params": {
+      "command": ["git", "status"],
+      "working_dir": "/Users/tim/gameplan.ai/ai-webhook"
+    }
+  }
+}
