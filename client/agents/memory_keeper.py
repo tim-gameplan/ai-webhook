@@ -5,8 +5,14 @@ Handles memory storage and retrieval for collaborative sessions.
 Allows LLMs to store and retrieve context across conversations.
 """
 
+import sys
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from typing import Dict, Any
-from .base_agent import BaseAgent, AgentResult
+from agents.base_agent import BaseAgent, AgentResult
 
 
 class MemoryKeeperAgent(BaseAgent):

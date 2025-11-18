@@ -1,0 +1,10 @@
+{
+  "type": "collaborative_session_command",
+  "command": "create_session",
+  "session_id": "mobile_test_001",
+  "data": {
+    "title": "Mobile LLM Integration Test",
+    "participants": ["chatgpt", "developer"],
+    "context": "Testing collaborative session features from mobile LLM"
+  }
+}

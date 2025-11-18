@@ -6,7 +6,7 @@ Deploy this to a cloud platform (Railway, Render, Fly.io, etc.)
 """
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 import hmac
 import hashlib
@@ -15,6 +15,7 @@ import os
 import asyncio
 from typing import Set, Dict
 from datetime import datetime
+from pathlib import Path
 
 app = FastAPI(title="GitHub Webhook Relay")
 
@@ -98,6 +99,28 @@ async def root():
         "connected_clients": len(connected_clients),
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+@app.get("/llm-instructions", response_class=PlainTextResponse)
+async def llm_instructions():
+    """
+    Serve LLM instructions for webhook system usage
+
+    LLMs can fetch this URL to get complete, up-to-date instructions
+    on how to use the webhook system for task execution and collaborative sessions.
+    """
+    instructions_path = Path(__file__).parent / "docs" / "LLM_INSTRUCTIONS.md"
+
+    if instructions_path.exists():
+        return instructions_path.read_text()
+    else:
+        return """# AI Webhook System - Instructions Not Found
+
+The instruction file is not available at this time.
+Please contact the system administrator.
+
+Expected path: docs/LLM_INSTRUCTIONS.md
+"""
 
 
 @app.websocket("/ws")
