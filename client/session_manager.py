@@ -8,12 +8,17 @@ Central coordinator for collaborative sessions. Handles:
 - Agent coordination
 """
 
-from typing import Dict, Any, Optional, List
+import sys
 from pathlib import Path
-from .models.session import CollaborativeSession, AgentTask
-from .agents.base_agent import BaseAgent, AgentResult
-from .agents.conversation_processor import ConversationProcessorAgent
-from .agents.memory_keeper import MemoryKeeperAgent
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+from typing import Dict, Any, Optional, List
+from models.session import CollaborativeSession, AgentTask
+from agents.base_agent import BaseAgent, AgentResult
+from agents.conversation_processor import ConversationProcessorAgent
+from agents.memory_keeper import MemoryKeeperAgent
 
 
 class SessionManager:

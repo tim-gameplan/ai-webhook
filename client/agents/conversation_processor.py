@@ -8,10 +8,16 @@ Handles large conversation chunks sent by LLMs, including:
 - Optional re-analysis
 """
 
+import sys
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from typing import Dict, Any
 from datetime import datetime
-from .base_agent import BaseAgent, AgentResult
-from ..models.session import ConversationChunk
+from agents.base_agent import BaseAgent, AgentResult
+from models.session import ConversationChunk
 
 
 class ConversationProcessorAgent(BaseAgent):
